@@ -19,7 +19,7 @@ import {
   FileText,
   Layers
 } from 'lucide-react';
-import { useCourse } from '../Context/CourseContext';
+import { useCourse } from '../context/CourseContext';
 
 const QuizPage = () => {
   const { courseId, moduleNumber } = useParams();
