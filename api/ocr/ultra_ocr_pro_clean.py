@@ -4,19 +4,15 @@ import json
 import cv2
 import numpy as np
 import pytesseract
-import easyocr
-import torch
 from PIL import Image
 from datetime import datetime
 import hashlib
 import sys
 import fitz  # PyMuPDF
 from pptx import Presentation
-import requests
-from io import BytesIO
 import traceback
 
-print("🚀 BRAINFORGE OCR PRO - Smart Text Extraction (Updated)")
+print("🚀 BRAINFORGE OCR PRO - Smart Text Extraction (Torch-Free Optimized)")
 print("=" * 60)
 
 class Config:
@@ -26,9 +22,8 @@ class Config:
     MIN_CONTENT_LENGTH = 100
     ENABLE_PREPROCESSING = True
 
-# Global variables for engines
+# Global variables for engines - TORCH FREE
 TESSERACT_READY = False
-EASYOCR_READER = None
 
 try:
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -44,12 +39,8 @@ except:
         TESSERACT_READY = False
         print("⚠️ Tesseract Not Found")
 
-try:
-    EASYOCR_READER = easyocr.Reader(['en'], gpu=torch.cuda.is_available())
-    print(f"✅ EasyOCR Ready (GPU: {torch.cuda.is_available()})")
-except Exception as e:
-    EASYOCR_READER = None
-    print(f"❌ EasyOCR Failed: {e}")
+# EasyOCR completely removed - TORCH FREE
+print("ℹ️ EasyOCR disabled (Torch-Free Mode) - Using Tesseract only")
 
 class UltraOCREngine:
     def __init__(self):
@@ -76,7 +67,7 @@ class UltraOCREngine:
             return self._structure_general_content(text)
     
     def _structure_pdf_content(self, text):
-        """Structure PDF content with page-wise extraction (unchanged, as issue was in PPT)"""
+        """Structure PDF content with page-wise extraction"""
         lines = text.split('\n')
         structured_content = []
         current_page = 1
@@ -136,20 +127,20 @@ class UltraOCREngine:
         current_slide = 1  # Start from 1, ensure no negative
         current_content = ""
         is_title = True
-        slide_detected = False  # New: Track if slide has started properly
+        slide_detected = False
         
-        print(f"🔧 Structuring PPT: Processing {len(lines)} lines")  # Debug log
+        print(f"🔧 Structuring PPT: Processing {len(lines)} lines")
         
         for line in lines:
             line = line.strip()
             if not line:
                 continue
             
-            # Enhanced slide detection - fixed to prevent -1
+            # Enhanced slide detection
             slide_match = re.match(r'^(?:## |Slide\s*|\-\-\- SLIDE\s*)(\d+)', line, re.IGNORECASE)
             if slide_match:
                 detected_slide = int(slide_match.group(1))
-                print(f"🔍 Detected slide separator: {line} -> Slide {detected_slide}")  # Debug
+                print(f"🔍 Detected slide separator: {line} -> Slide {detected_slide}")
                 
                 if current_content:
                     structured_content.append({
@@ -159,18 +150,18 @@ class UltraOCREngine:
                     })
                     current_content = ""
                 
-                # Ensure slide number is positive and increments correctly
+                # Ensure slide number is positive
                 if detected_slide > 0 and detected_slide >= current_slide:
                     current_slide = detected_slide
                 else:
-                    current_slide += 1  # Safe increment if invalid
+                    current_slide += 1
                     print(f"⚠️ Invalid slide number {detected_slide}, incrementing to {current_slide}")
                 
                 is_title = True
                 slide_detected = True
                 continue
             
-            # Fallback detection for slide starts (e.g., "Slide X" without ##)
+            # Fallback detection
             if not slide_detected and re.search(r'slide\s*\d+', line.lower()):
                 if current_content:
                     structured_content.append({
@@ -179,7 +170,7 @@ class UltraOCREngine:
                         'type': 'slide_content'
                     })
                     current_content = ""
-                current_slide += 1  # Increment safely
+                current_slide += 1
                 print(f"🔍 Fallback slide detection: Starting slide {current_slide}")
                 is_title = True
                 slide_detected = True
@@ -192,11 +183,11 @@ class UltraOCREngine:
                     'type': 'title'
                 })
                 is_title = False
-                slide_detected = True  # Mark as detected once title added
+                slide_detected = True
             elif line:
                 current_content += line + " "
         
-        # Add remaining content with final slide number
+        # Add remaining content
         if current_content:
             structured_content.append({
                 'slide': current_slide,
@@ -204,11 +195,11 @@ class UltraOCREngine:
                 'type': 'slide_content'
             })
         
-        print(f"✅ PPT Structured: {len(structured_content)} items, final slide: {current_slide}")  # Debug
+        print(f"✅ PPT Structured: {len(structured_content)} items, final slide: {current_slide}")
         return self._format_structured_content(structured_content)
     
     def _structure_general_content(self, text):
-        """Structure general content with paragraph detection (minor enhancement)"""
+        """Structure general content with paragraph detection"""
         paragraphs = re.split(r'\n\s*\n', text)
         structured_content = []
         
@@ -234,7 +225,7 @@ class UltraOCREngine:
         return self._format_structured_content(structured_content)
     
     def _format_structured_content(self, structured_data):
-        """Format structured data into readable text (unchanged)"""
+        """Format structured data into readable text"""
         formatted_text = ""
         
         for item in structured_data:
@@ -253,7 +244,7 @@ class UltraOCREngine:
         return formatted_text.strip()
     
     def clean_text_for_ai(self, text):
-        """Enhanced cleaning specifically for AI processing (added better slide/page preservation)"""
+        """Enhanced cleaning specifically for AI processing"""
         if not text:
             return ""
         
@@ -262,19 +253,19 @@ class UltraOCREngine:
             r'TABLE/STRUCTURE:.*?\n',
             r'IMAGE DETECTED:.*?\n',
             r'$$EXTRACTION STATS:.*?$$',
-            r'\b\d+\b\s*$',  # Standalone page numbers (but preserve --- PAGE/SLIDE ---)
-            r'^\s*\w+\s+\d+\s*$',  # Headers/footers
-            r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\$$\$$,]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',  # URLs
+            r'\b\d+\b\s*$',
+            r'^\s*\w+\s+\d+\s*$',
+            r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\$$\$$,]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
         ]
         
         for pattern in patterns_to_remove:
             text = re.sub(pattern, '', text, flags=re.MULTILINE)
         
         # Clean up whitespace while preserving structure
-        text = re.sub(r' +', ' ', text)  # Multiple spaces to single
-        text = re.sub(r'\n\s+', '\n', text)  # Clean line breaks
+        text = re.sub(r' +', ' ', text)
+        text = re.sub(r'\n\s+', '\n', text)
         
-        # Remove very short lines that are noise, but keep structural markers
+        # Remove very short lines that are noise
         lines = text.split('\n')
         cleaned_lines = []
         for line in lines:
@@ -292,8 +283,6 @@ class UltraOCREngine:
         text = '\n'.join(cleaned_lines)
         
         return text
-    
-    # [Rest of the methods remain the same as in your original code: file_hash, enhance_image_quality, process_pdf, _extract_pdf_with_ocr, process_ppt (with minor log additions for slide nums), preprocess_image, extract_with_tesseract, extract_with_easyocr, smart_text_fusion, extract_from_image, process_file, get_stats]
     
     def file_hash(self, file_path):
         stats = os.stat(file_path)
@@ -346,7 +335,7 @@ class UltraOCREngine:
                     artifacts = [
                         r'http[s]?://\S+',
                         r'www\.\S+',
-                        r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'  # emails
+                        r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
                     ]
                     
                     for artifact in artifacts:
@@ -381,7 +370,7 @@ class UltraOCREngine:
             
             for page_num in range(len(doc)):
                 page = doc[page_num]
-                pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # Higher resolution
+                pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
                 img_data = pix.tobytes("png")
                 
                 # Convert to OpenCV format
@@ -392,20 +381,10 @@ class UltraOCREngine:
                     # Preprocess image
                     enhanced_img = self.enhance_image_quality(img)
                     
-                    # Extract text with both engines
+                    # Extract text with Tesseract only (TORCH FREE)
                     text_results = []
                     
-                    # EasyOCR
-                    if EASYOCR_READER:
-                        try:
-                            results = EASYOCR_READER.readtext(enhanced_img, paragraph=True, detail=1)
-                            easyocr_text = ' '.join([result[1] for result in results if result[2] > 0.3])
-                            if easyocr_text.strip():
-                                text_results.append(easyocr_text)
-                        except Exception as e:
-                            print(f"EasyOCR page {page_num} error: {e}")
-                    
-                    # Tesseract
+                    # Tesseract only - no EasyOCR
                     if TESSERACT_READY:
                         try:
                             tesseract_text = pytesseract.image_to_string(enhanced_img, config='--psm 6')
@@ -433,7 +412,7 @@ class UltraOCREngine:
             return f"PDF OCR extraction error: {str(e)}"
     
     def process_ppt(self, ppt_path):
-        """Enhanced PPT extraction with structured content - Added slide num logging"""
+        """Enhanced PPT extraction with structured content"""
         try:
             prs = Presentation(ppt_path)
             slides_content = []
@@ -443,7 +422,7 @@ class UltraOCREngine:
                 slide_text = []
                 slide_title = ""
                 
-                print(f"🔍 Processing slide {slide_num + 1}")  # Debug log
+                print(f"🔍 Processing slide {slide_num + 1}")
                 
                 # Get title
                 if slide.shapes.title and slide.shapes.title.text.strip():
@@ -456,7 +435,6 @@ class UltraOCREngine:
                 for shape in slide.shapes:
                     if hasattr(shape, "text") and shape.text.strip():
                         text = shape.text.strip()
-                        # Better filtering
                         if (len(text) > 10 and 
                             not text.isupper() and
                             not re.match(r'^[\d\W]+$', text) and
@@ -473,7 +451,7 @@ class UltraOCREngine:
                 if slide_text:
                     slide_content = "\n".join(slide_text)
                     slides_content.append({
-                        'slide': slide_num + 1,  # Ensure positive numbering
+                        'slide': slide_num + 1,
                         'title': slide_title,
                         'content': slide_content
                     })
@@ -489,8 +467,6 @@ class UltraOCREngine:
             
         except Exception as e:
             return f"PPT extraction error: {str(e)}"
-    
-    # [Other methods like preprocess_image, extract_with_tesseract, etc., remain the same as original to save space - no changes needed]
     
     def preprocess_image(self, image_path):
         """Enhanced image preprocessing for better OCR"""
@@ -552,40 +528,6 @@ class UltraOCREngine:
             print(f"Tesseract error ({config_name}): {e}")
         return None
     
-    def extract_with_easyocr(self, image):
-        """Enhanced EasyOCR extraction"""
-        try:
-            if EASYOCR_READER is None:
-                return None
-            
-            results = EASYOCR_READER.readtext(image, paragraph=True, detail=1)
-            full_text = []
-            avg_confidence = 0
-            valid_results = 0
-            
-            for result in results:
-                bbox, text, confidence = result
-                # More lenient confidence threshold
-                if confidence > 0.2 and len(text.strip()) > 2:
-                    full_text.append(text.strip())
-                    avg_confidence += confidence
-                    valid_results += 1
-            
-            if full_text:
-                avg_confidence = avg_confidence / valid_results if valid_results > 0 else 0.5
-                combined_text = ' '.join(full_text)
-                return {
-                    'engine': 'easyocr',
-                    'text': combined_text.strip(),
-                    'confidence': avg_confidence,
-                    'length': len(combined_text)
-                }
-        
-        except Exception as e:
-            print(f"EasyOCR error: {e}")
-        
-        return None
-    
     def smart_text_fusion(self, results):
         """Enhanced text fusion from multiple engines"""
         if not results:
@@ -606,7 +548,7 @@ class UltraOCREngine:
         return best_result['text']
     
     def extract_from_image(self, image_path):
-        """Enhanced main image extraction"""
+        """Enhanced main image extraction - TORCH FREE"""
         print(f"🔍 Processing image: {os.path.basename(image_path)}")
         
         # Cache check
@@ -625,26 +567,19 @@ class UltraOCREngine:
         
         print(f"🛠️ Using {len(preprocessed)} preprocessing techniques")
         
-        # Extract with multiple techniques
+        # Extract with multiple techniques - TESSERACT ONLY (TORCH FREE)
         all_results = []
         tesseract_configs = [
             ('psm3', '--psm 3'),
             ('psm6', '--psm 6'),
-            ('psm4', '--psm 4'),  # Single column
-            ('psm8', '--psm 8'),  # Single word
+            ('psm4', '--psm 4'),
+            ('psm8', '--psm 8'),
         ]
         
         for technique_name, image in preprocessed.items():
             print(f"  🔧 Technique: {technique_name}")
             
-            # EasyOCR
-            easyocr_result = self.extract_with_easyocr(image)
-            if easyocr_result:
-                easyocr_result['technique'] = technique_name
-                all_results.append(easyocr_result)
-                print(f"    ✅ EasyOCR: {len(easyocr_result['text'])} chars, conf: {easyocr_result['confidence']:.2f}")
-            
-            # Tesseract with different configs
+            # Tesseract with different configs only
             for config_name, config in tesseract_configs:
                 tesseract_result = self.extract_with_tesseract(image, config_name, config)
                 if tesseract_result:
