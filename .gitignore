@@ -85,3 +85,4 @@ out/
 *.swp
 *.swo
 .git
+.vercel
