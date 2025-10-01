@@ -1,14 +1,15 @@
-flask==2.3.3
+Flask==2.3.3
 flask-cors==4.0.0
 pymongo==4.5.0
 python-dotenv==1.0.0
 pytesseract==0.3.10
 opencv-python==4.8.1.78
 easyocr==1.7.0
-torch==2.1.0
-torchvision==0.16.0
+torch==2.4.1  # Changed from 2.7.1: Stable for Python 3.13, full support. (2.7.1 beta-like, mismatch risk)
+torchvision==0.19.1  # Pair with Torch 2.4.1 (official), for EasyOCR images/CV
+gunicorn==21.2.0
 pillow==10.0.1
-numpy==1.24.3
-pymupdf==1.23.7
+numpy==2.1.1  # Updated from 1.24.3: Modern, Python 3.13 compatible (no NumPyDeprecationWarning)
+pymupdf==1.24.9  # Updated from 1.23.7: Latest stable, better PDF handling
 python-pptx==0.6.21
 google-generativeai==0.3.2
