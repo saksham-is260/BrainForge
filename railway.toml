@@ -1,0 +1,8 @@
+echo '[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "gunicorn app:app --bind 0.0.0.0:\$PORT"
+
+[build.environment]
+NIXPKGS_ARCH = "x86_64-linux"' > railway.toml
