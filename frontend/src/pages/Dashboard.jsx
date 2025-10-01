@@ -13,7 +13,7 @@ import {
   Brain,
   Zap
 } from 'lucide-react';
-import { useCourse } from '../Context/CourseContext';
+import { useCourse } from '../context/CourseContext';
 
 const Dashboard = ({ onCourseSelect, setSidebarOpen }) => {
   const { courses, loading, error, refreshCourses } = useCourse();
