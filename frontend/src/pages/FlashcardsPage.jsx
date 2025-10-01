@@ -15,7 +15,7 @@ import {
   Brain,
   Target
 } from 'lucide-react';
-import { useCourse } from '../Context/CourseContext';
+import { useCourse } from '../context/CourseContext';
 
 const FlashcardsPage = () => {
   const { courseId } = useParams();
