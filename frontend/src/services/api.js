@@ -1,5 +1,5 @@
 // services/api.js - UPDATED VERSION
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = "https://brainforge-5.onrender.com/api";
 
 class ApiService {
   constructor() {
