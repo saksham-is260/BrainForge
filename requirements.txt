@@ -1,0 +1,31 @@
+Flask==2.3.3
+flask-cors==4.0.0
+PyMongo==4.6.0
+python-dotenv==1.0.0
+google-generativeai==0.3.2
+gunicorn==21.2.0  # Server ke liye (Vercel mein optional, but better)
+
+
+# OCR and Image Processing
+pytesseract==0.3.10  # Tesseract OCR (may need binary on Vercel – test carefully)
+opencv-python==4.8.1.78
+easyocr==1.7.1  # Updated minor for bug fixes; ML-based OCR (no external binary needed)
+torch==2.1.2  # Updated minor for security/bugs; CPU-only (add torch==2.1.2+cpu if CUDA not needed)
+torchvision==0.16.0
+pillow==10.0.1  # Image/PDF handling
+
+# Math and Utilities
+numpy==1.24.3
+
+# PDF and PPTX Processing
+pymupdf==1.23.26  # Updated for latest PDF handling
+python-pptx==0.6.21
+
+# Gemini AI Integration
+google-generativeai==0.3.2
+
+# Production Server (for Vercel serverless)
+gunicorn==21.2.0
+
+# Additional for Flask/Files
+Werkzeug==2.3.7  # Secure file uploads and parsing

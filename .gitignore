@@ -1,0 +1,87 @@
+# Windows & System Junk (Ignore Permission Denied Files)
+AppData/
+Application Data/
+Cookies/
+Local Settings/
+My Documents/
+NetHood/
+PrintHood/
+Recent/
+SendTo/
+Start Menu/
+Templates/
+Documents/My Music/
+Documents/My Pictures/
+Documents/My Videos/
+NTUSER.DAT*
+ntuser.dat*
+*TM.blf
+*TMContainer*.regtrans-ms
+ntuser.ini
+Thumbs.db
+Desktop.ini
+
+# User Profile & External Paths (No Scanning Upwards)
+../*
+../../*
+../../../*
+../../../../*
+~/ 
+/Users/
+C:/Users/iamja/OneDrive/Desktop/
+OneDrive/Desktop/
+
+# Anaconda & Tools (Ignore Global Installs)
+.anaconda/
+.conda/
+.continuum/
+anaconda_projects/
+.cache/
+.EasyOCR/
+.claude/
+.config/
+.condarc
+.eclipse/
+.jdks/
+.jupyter/
+.lesshst
+.matplotlib/
+.p2/
+.vscode/  # IDE settings - add back if project specific
+.yarnrc
+eclipse-workspace/
+java_error_in_idea_*.log
+hello
+
+# Project Secrets & Local Dev (Don't Commit)
+.env
+api/.env
+backend/.env
+frontend/.env
+venv/
+env/
+backend/venv/
+api/venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+tmp/
+uploads/
+api/uploads/
+backend/uploads/
+
+# Frontend (If React/Vue/Node)
+node_modules/
+frontend/node_modules/
+.next/
+out/
+.pnp
+.pnp.js
+
+# Other
+.DS_Store
+*.swp
+*.swo
+.git
