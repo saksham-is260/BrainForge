@@ -26,7 +26,7 @@ import {
   Menu,
   X
 } from 'lucide-react';
-import { useCourse } from '../Context/CourseContext';
+import { useCourse } from '../context/CourseContext';
 
 const CourseViewer = () => {
   const { courseId } = useParams();
