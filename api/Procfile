@@ -1,5 +1,1 @@
-<<<<<<< HEAD
-web: gunicorn app:app --bind 0.0.0.0:$PORT
-=======
-web: gunicorn app:app --bind 0.0.0.0:$PORT
->>>>>>> 3850111cfd0536b77d0a07d2ed5708908b530261
+web: cd api && gunicorn app:app --bind 0.0.0.0:$PORT
