@@ -8,7 +8,7 @@ import FlashcardsPage from './pages/FlashcardsPage';
 import QuizPage from './pages/QuizPage';
 import ProgressPage from './pages/ProgressPage';
 import SettingsPage from './pages/SettingsPage';
-import { CourseProvider } from './Context/CourseContext';
+import { CourseProvider } from './context/CourseContext';
 import './App.css';
 
 function App() {
