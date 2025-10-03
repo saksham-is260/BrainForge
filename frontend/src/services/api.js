@@ -1,4 +1,4 @@
-// services/api.js - UPDATED FOR PRODUCTION
+// services/api.js - UPDATED VERSION
 const API_BASE_URL = "https://brainforge-5.onrender.com/api";
 
 class ApiService {
@@ -12,39 +12,28 @@ class ApiService {
     try {
       console.log(`🌐 API Calling: ${url}`);
       
-      const config = {
+      const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
           ...options.headers,
         },
         ...options,
-      };
-
-      // Add body for non-GET requests
-      if (options.body && config.method !== 'GET') {
-        config.body = JSON.stringify(options.body);
-      }
-
-      const response = await fetch(url, config);
+      });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
-      console.log(`✅ API Success: ${url}`, data);
+      console.log(`✅ API Success: ${url}`);
       return data;
 
     } catch (error) {
       console.error(`❌ API Failed: ${url}`, error);
       
-      // Better error messages
+      // Better error handling
       if (error.message.includes('Failed to fetch')) {
-        throw new Error('Cannot connect to backend server. Please check if the server is running.');
-      }
-      if (error.message.includes('404')) {
-        throw new Error('API endpoint not found. Please check the endpoint URL.');
+        throw new Error('Backend server not reachable. Please check if backend is running.');
       }
       throw error;
     }
@@ -78,21 +67,28 @@ class ApiService {
     }
   }
 
-  // ✅ UPLOAD WITH PROPER FORM DATA
-  async uploadFile(formData, settings = {}) {
+  async getCourseByContentId(contentId) {
+    try {
+      const response = await this.request(`/course/content/${contentId}`);
+      return response;
+    } catch (error) {
+      console.error(`Failed to fetch course by content ${contentId}:`, error);
+      return { 
+        success: false, 
+        error: error.message 
+      };
+    }
+  }
+
+  // ✅ UPLOAD WITH BETTER ERROR HANDLING
+  async uploadFile(formData) {
     try {
       const url = `${this.baseURL}/upload`;
       console.log('📤 Uploading file to:', url);
       
-      // Add settings to formData
-      Object.keys(settings).forEach(key => {
-        formData.append(key, settings[key]);
-      });
-
       const response = await fetch(url, {
         method: 'POST',
         body: formData,
-        // Don't set Content-Type for FormData
       });
 
       if (!response.ok) {
@@ -110,13 +106,37 @@ class ApiService {
     }
   }
 
-  // ✅ QUIZ ENDPOINTS
-  async getModuleQuiz(courseId, moduleNumber) {
+  // ✅ QUIZ & FLASHCARDS DATA
+  async getQuizData(courseId, moduleNumber = null) {
     try {
-      const response = await this.request(`/course/${courseId}/module/${moduleNumber}/quiz`);
-      return response;
+      // First get course data
+      const courseResponse = await this.getCourse(courseId);
+      if (!courseResponse.success) {
+        throw new Error('Course not found');
+      }
+
+      const course = courseResponse.course;
+      
+      // Extract quiz from course modules
+      let quizData = null;
+      if (moduleNumber && course.modules) {
+        const module = course.modules.find(m => m.module_number === parseInt(moduleNumber));
+        quizData = module?.quiz;
+      }
+      
+      // If no specific module, create comprehensive quiz
+      if (!quizData) {
+        quizData = this.createComprehensiveQuiz(course);
+      }
+
+      return {
+        success: true,
+        quiz: quizData,
+        course: course
+      };
+
     } catch (error) {
-      console.error(`Failed to fetch quiz for module ${moduleNumber}:`, error);
+      console.error('Failed to get quiz data:', error);
       return { 
         success: false, 
         error: error.message 
@@ -124,46 +144,46 @@ class ApiService {
     }
   }
 
-  async getCourseQuiz(courseId) {
-    try {
-      const response = await this.request(`/course/${courseId}/quiz`);
-      return response;
-    } catch (error) {
-      console.error(`Failed to fetch course quiz ${courseId}:`, error);
-      return { 
-        success: false, 
-        error: error.message 
-      };
-    }
+  createComprehensiveQuiz(course) {
+    // Create quiz from course modules
+    const allQuestions = [];
+    
+    course.modules?.forEach(module => {
+      if (module.quiz?.questions) {
+        allQuestions.push(...module.quiz.questions.map(q => ({
+          ...q,
+          module: module.module_number,
+          moduleTitle: module.title
+        })));
+      }
+    });
+
+    return {
+      totalQuestions: allQuestions.length,
+      moduleTitle: 'Course Comprehensive Quiz',
+      timeLimit: 600, // 10 minutes
+      questions: allQuestions.slice(0, 10) // Take first 10 questions
+    };
   }
 
-  // ✅ COURSE GENERATION
-  async generateCourse(contentId, settings = {}) {
+  async getFlashcardsData(courseId) {
     try {
-      const response = await this.request('/generate-course', {
-        method: 'POST',
-        body: {
-          content_id: contentId,
-          settings: settings
-        }
-      });
-      return response;
-    } catch (error) {
-      console.error('Failed to generate course:', error);
-      return { 
-        success: false, 
-        error: error.message 
-      };
-    }
-  }
+      const courseResponse = await this.getCourse(courseId);
+      if (!courseResponse.success) {
+        throw new Error('Course not found');
+      }
 
-  // ✅ COURSE SETTINGS
-  async getCourseSettingsOptions() {
-    try {
-      const response = await this.request('/course-settings/options');
-      return response;
+      const course = courseResponse.course;
+      const flashcards = course.flashcards || [];
+
+      return {
+        success: true,
+        flashcards: flashcards,
+        course: course
+      };
+
     } catch (error) {
-      console.error('Failed to fetch course settings:', error);
+      console.error('Failed to get flashcards:', error);
       return { 
         success: false, 
         error: error.message 
@@ -172,79 +192,28 @@ class ApiService {
   }
 
   // ✅ PROGRESS TRACKING
-  async saveQuizResult(quizData) {
-    try {
-      const response = await this.request('/analytics/quiz-result', {
-        method: 'POST',
-        body: quizData
-      });
-      return response;
-    } catch (error) {
-      console.error('Failed to save quiz result:', error);
-      return { 
-        success: false, 
-        error: error.message 
-      };
-    }
+  async saveProgress(courseId, moduleNumber, progressData) {
+    return this.request('/analytics/progress', {
+      method: 'POST',
+      body: JSON.stringify({
+        course_id: courseId,
+        module_number: moduleNumber,
+        progress_data: progressData
+      }),
+    });
   }
 
-  async saveProgress(progressData) {
-    try {
-      const response = await this.request('/analytics/progress', {
-        method: 'POST',
-        body: progressData
-      });
-      return response;
-    } catch (error) {
-      console.error('Failed to save progress:', error);
-      return { 
-        success: false, 
-        error: error.message 
-      };
-    }
-  }
-
-  // ✅ HEALTH & DEBUG
-  async healthCheck() {
-    try {
-      const response = await this.request('/health');
-      return response;
-    } catch (error) {
-      console.error('Health check failed:', error);
-      return { 
-        status: 'unhealthy',
-        error: error.message 
-      };
-    }
-  }
-
+  // ✅ DEBUG ENDPOINTS
   async getDebugInfo() {
-    try {
-      const response = await this.request('/debug');
-      return response;
-    } catch (error) {
-      console.error('Debug info failed:', error);
-      return { 
-        success: false, 
-        error: error.message 
-      };
-    }
+    return this.request('/debug');
   }
 
-  // ✅ TEST UPLOAD
-  async testUpload() {
-    try {
-      const response = await this.request('/test-upload', {
-        method: 'POST'
-      });
-      return response;
-    } catch (error) {
-      console.error('Test upload failed:', error);
-      return { 
-        success: false, 
-        error: error.message 
-      };
-    }
+  async getDatabaseStats() {
+    return this.request('/debug/db');
+  }
+
+  async healthCheck() {
+    return this.request('/health');
   }
 }
 

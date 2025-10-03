@@ -56,8 +56,16 @@ export const CourseProvider = ({ children }) => {
       console.log('🔄 Fetching courses from API...');
       
       // First check backend health
-      const health = await api.healthCheck();
-      console.log('🔧 Backend health:', health);
+      try {
+        const health = await api.healthCheck();
+        console.log('🔧 Backend health:', health);
+      } catch (healthError) {
+        console.log('❌ Backend not reachable, using mock data');
+        const mockCourses = getMockCourses();
+        setCourses(mockCourses);
+        setLoading(false);
+        return;
+      }
 
       const response = await api.getRecentCourses();
       console.log('📦 API Response:', response);
@@ -81,6 +89,9 @@ export const CourseProvider = ({ children }) => {
       } else {
         setError(response.error || 'No courses found');
         console.log('❌ No courses in response:', response);
+        // Fallback to mock data
+        const mockCourses = getMockCourses();
+        setCourses(mockCourses);
       }
     } catch (err) {
       console.error('❌ Failed to fetch courses:', err);
@@ -273,7 +284,6 @@ export const CourseProvider = ({ children }) => {
 
     const questions = moduleNumber ? 
       (moduleSpecificQuestions[moduleNumber] || moduleSpecificQuestions[1]) : 
-      // Comprehensive quiz - mix questions from all modules
       Object.values(moduleSpecificQuestions).flat();
 
     const quiz = {
