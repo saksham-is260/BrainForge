@@ -11,11 +11,15 @@ import {
   Target,
   BarChart3,
   Brain,
-  Zap
+  Zap,
+  Clock,
+  Users
 } from 'lucide-react';
+import { useCourse } from '../context/CourseContext';
 
 const Sidebar = ({ isOpen, onClose, selectedCourse }) => {
   const location = useLocation();
+  const { courses } = useCourse();
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home },
@@ -24,6 +28,24 @@ const Sidebar = ({ isOpen, onClose, selectedCourse }) => {
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
+  // Calculate real stats from courses
+  const calculateStats = () => {
+    const totalCourses = courses.length;
+    const completedCourses = courses.filter(course => course.progress === 100).length;
+    const totalStudyTime = courses.reduce((total, course) => {
+      const duration = parseInt(course.estimated_duration) || 2;
+      return total + duration;
+    }, 0);
+    const completionRate = totalCourses > 0 ? Math.round((completedCourses / totalCourses) * 100) : 0;
+
+    return {
+      totalCourses,
+      totalStudyTime: `${totalStudyTime}h`,
+      completionRate: `${completionRate}%`
+    };
+  };
+
+  const stats = calculateStats();
   const isActive = (path) => location.pathname === path;
 
   return (
@@ -136,23 +158,41 @@ const Sidebar = ({ isOpen, onClose, selectedCourse }) => {
           </div>
         )}
 
-        {/* Quick Stats */}
+        {/* Quick Stats - REAL DATA */}
         <div className="mt-8 px-4">
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
             Quick Stats
           </h3>
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-300">Courses</span>
-              <span className="text-white font-medium">12</span>
+              <div className="flex items-center text-gray-300">
+                <BookOpen size={14} className="mr-2" />
+                <span>Courses</span>
+              </div>
+              <span className="text-white font-medium">{stats.totalCourses}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-300">Study Time</span>
-              <span className="text-white font-medium">45h</span>
+              <div className="flex items-center text-gray-300">
+                <Clock size={14} className="mr-2" />
+                <span>Study Time</span>
+              </div>
+              <span className="text-white font-medium">{stats.totalStudyTime}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-300">Progress</span>
-              <span className="text-white font-medium">68%</span>
+              <div className="flex items-center text-gray-300">
+                <TrendingUp size={14} className="mr-2" />
+                <span>Progress</span>
+              </div>
+              <span className="text-white font-medium">{stats.completionRate}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center text-gray-300">
+                <Users size={14} className="mr-2" />
+                <span>Active</span>
+              </div>
+              <span className="text-white font-medium">
+                {courses.filter(course => course.progress > 0 && course.progress < 100).length}
+              </span>
             </div>
           </div>
         </div>
@@ -160,8 +200,11 @@ const Sidebar = ({ isOpen, onClose, selectedCourse }) => {
         {/* Footer */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
           <div className="text-center">
-            <p className="text-xs text-gray-400">
-              Study Smart, Not Hard
+            <p className="text-xs text-gray-400 mb-1">
+              Developed by Jatin Sharma
+            </p>
+            <p className="text-xs text-gray-500">
+              Learn Smarter, Achieve Faster
             </p>
           </div>
         </div>

@@ -1,7 +1,6 @@
-// components/Footer.js
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Brain, Github, Twitter, Mail } from 'lucide-react';
+import { Brain, Github, Twitter, Mail, Heart } from 'lucide-react';
 
 const Footer = () => {
   return (
@@ -21,8 +20,13 @@ const Footer = () => {
             </Link>
             <p className="mt-4 text-gray-500 text-sm max-w-md">
               Transform any content into comprehensive learning courses with AI. 
-              Study smarter, not harder with personalized educational experiences.
+              Smart learning for ambitious minds - where knowledge meets innovation.
             </p>
+            <div className="mt-3 flex items-center text-sm text-gray-500">
+              <span>Made with</span>
+              <Heart size={14} className="mx-1 text-red-500" />
+              <span>by Jatin Sharma</span>
+            </div>
           </div>
 
           {/* Links */}
@@ -74,17 +78,18 @@ const Footer = () => {
         </div>
 
         <div className="mt-8 pt-8 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-gray-500 text-sm">
-            © 2024 BrainForge. All rights reserved.
-          </p>
+          <div className="flex items-center text-gray-500 text-sm">
+            <span>© 2024 BrainForge. Crafted with passion by </span>
+            <span className="font-semibold text-gray-700 ml-1">Jatin Sharma</span>
+          </div>
           <div className="flex space-x-6 mt-4 md:mt-0">
-            <a href="#" className="text-gray-400 hover:text-gray-500 transition-colors">
+            <a href="#" className="text-gray-400 hover:text-gray-500 transition-colors" title="Twitter">
               <Twitter size={20} />
             </a>
-            <a href="#" className="text-gray-400 hover:text-gray-500 transition-colors">
+            <a href="#" className="text-gray-400 hover:text-gray-500 transition-colors" title="GitHub">
               <Github size={20} />
             </a>
-            <a href="#" className="text-gray-400 hover:text-gray-500 transition-colors">
+            <a href="#" className="text-gray-400 hover:text-gray-500 transition-colors" title="Email">
               <Mail size={20} />
             </a>
           </div>
