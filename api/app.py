@@ -7,6 +7,8 @@ import traceback
 from bson import ObjectId
 import logging
 import re  # Added for option formatting in quiz routes
+import tempfile  # ✅ ADD THIS
+import uuid      # ✅ ADD THIS
 
 # Setup logging
 logging.basicConfig(level=logging.DEBUG)
@@ -14,11 +16,21 @@ logger = logging.getLogger(__name__)
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app, origins=["*"])
 
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# ✅ FIXED: Enhanced CORS configuration - ALL origins allow karo
+CORS(app, 
+     origins=["*"],  # Sabhi origins allow kar do
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     allow_headers=["*"],  # Sabhi headers allow kar do
+     supports_credentials=True,
+     max_age=3600)
+
+# ✅ FIXED: Render compatible upload folder
+UPLOAD_FOLDER = tempfile.gettempdir()  # System temp folder use karo
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 60 * 1024 * 1024
+
+print(f"📁 Upload folder set to: {UPLOAD_FOLDER}")
 
 class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -54,6 +66,9 @@ def health_check():
         "status": "healthy", 
         "timestamp": datetime.now().isoformat(),
         "service": "BrainForge Backend",
+        "cors_enabled": True,
+        "allowed_origins": "ALL (*)",
+        "upload_folder": UPLOAD_FOLDER,  # ✅ Show which folder is being used
         "components": {
             "ocr": "ready" if ocr_engine else "error",
             "database": "ready" if db_manager and db_manager.is_connected() else "error",
@@ -61,11 +76,17 @@ def health_check():
         }
     })
 
-@app.route('/api/upload', methods=['POST'])
+@app.route('/api/upload', methods=['POST', 'OPTIONS'])
 def upload_file():
     """Handle file upload and processing with enhanced quiz settings"""
     try:
+        # Handle preflight OPTIONS request
+        if request.method == 'OPTIONS':
+            response = jsonify({'status': 'OK'})
+            return response
+            
         print("📥 Received upload request")
+        print(f"📁 Upload folder: {UPLOAD_FOLDER}")
         
         if 'file' not in request.files:
             return jsonify({"error": "No file provided"}), 400
@@ -75,6 +96,13 @@ def upload_file():
             return jsonify({"error": "No file selected"}), 400
         
         print(f"📄 File received: {file.filename}")
+        
+        # ✅ FIXED: Safe filename with unique ID
+        safe_filename = f"{uuid.uuid4()}_{file.filename}"
+        file_path = os.path.join(UPLOAD_FOLDER, safe_filename)
+        
+        print(f"💾 Saving file as: {safe_filename}")
+        print(f"📍 Full path: {file_path}")
         
         # Get ENHANCED settings with proper defaults
         settings = {
@@ -91,14 +119,28 @@ def upload_file():
         
         print(f"⚙️ Settings with quizzes: {settings}")
         
-        # Save and process file
-        file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-        file.save(file_path)
+        # ✅ FIXED: Save file with better error handling
+        try:
+            file.save(file_path)
+            print(f"✅ File saved successfully: {file_path}")
+        except Exception as save_error:
+            print(f"❌ File save failed: {save_error}")
+            return jsonify({"error": f"File save failed: {str(save_error)}"}), 500
+        
+        # Check if file actually saved
+        if not os.path.exists(file_path):
+            return jsonify({"error": "File could not be saved to server"}), 500
+            
+        file_size = os.path.getsize(file_path)
+        print(f"📊 File size: {file_size} bytes")
         
         # Process with OCR
         if not ocr_engine:
+            if os.path.exists(file_path):
+                os.remove(file_path)
             return jsonify({"error": "OCR engine not available"}), 500
         
+        print("🔍 Starting OCR processing...")
         ocr_result = ocr_engine.process_file(file_path)
         
         if "error" in ocr_result:
@@ -118,6 +160,8 @@ def upload_file():
         
         # Save to database
         if not db_manager:
+            if os.path.exists(file_path):
+                os.remove(file_path)
             return jsonify({"error": "Database not available"}), 500
         
         content_data = {
@@ -187,6 +231,7 @@ def upload_file():
         # Cleanup
         if os.path.exists(file_path):
             os.remove(file_path)
+            print("🧹 Temporary file cleaned up")
         
         response_data = {
             "success": True,
@@ -211,6 +256,7 @@ def upload_file():
         
         if 'file_path' in locals() and os.path.exists(file_path):
             os.remove(file_path)
+            print("🧹 Temporary file cleaned up after error")
             
         return jsonify({"error": f"Server error: {str(e)}"}), 500
 
@@ -548,7 +594,6 @@ def save_quiz_result():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Keep all your existing routes below...
 @app.route('/api/generate-course', methods=['POST'])
 def generate_course():
     """Generate course from extracted content with settings - Supports batching"""
@@ -767,6 +812,17 @@ def save_progress_analytics():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/cors-test', methods=['GET', 'POST', 'OPTIONS'])
+def cors_test():
+    """Test CORS configuration"""
+    return jsonify({
+        "success": True,
+        "message": "CORS is working!",
+        "timestamp": datetime.now().isoformat(),
+        "allowed_origins": "ALL (*)",
+        "method": request.method
+    })
+
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({"error": "Endpoint not found"}), 404
@@ -776,9 +832,10 @@ def internal_error(error):
     return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == '__main__':
-    print("🚀 Starting BrainForge Backend with Quiz Support...")
-    print("🔧 Debug mode: ON | Quiz Generation: Enabled")
-    print("🌐 Server running on http://localhost:5000")
-    print("💡 Make sure MongoDB is running and GEMINI_API_KEY is set")
+    print("🚀 Starting BrainForge Backend with Enhanced CORS Support...")
+    print("🔧 Debug mode: ON | CORS: Enabled")
+    print(f"📁 Upload Folder: {UPLOAD_FOLDER}")  # ✅ Show which folder is being used
+    print("🌐 Allowed Origins: ALL (*) - Complete CORS access")
+    print("💡 Server running on http://localhost:5000")
     
     app.run(debug=True, port=5000, host='0.0.0.0')
