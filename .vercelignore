@@ -1,0 +1,17 @@
+# Ignore ALL backend files
+api/
+requirements.txt
+*.py
+*.pyc
+__pycache__/
+ocr/
+database/
+gemini_processor.py
+app.py
+.env
+Procfile
+uploads/
+ocr_cache/
+
+# Only include frontend
+!frontend/
