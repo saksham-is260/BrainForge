@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { 
+import React, {{ useState, useEffect }} from 'react';
+import {{ Link }} from 'react-router-dom';
+import {{ 
   ChevronRight, 
   TrendingUp, 
-  Calendar, 
-  Addward,
+  Calendar,
   Target,
-  wwdClock,
+  Clock,
   BookOpen,
   BarChart3,
   Home,
-  CheckCircdsssle2,
+  CheckCircle2,
   PlayCircle,
   Star,
   Users,
-  Zap
-} from 'lucide-react';
+  Zap,
+  Award
+}} from 'lucide-react';
 import { useCourse } from '../context/CourseContext';
 
 const ProgressPage = () => {
@@ -43,19 +43,19 @@ const ProgressPage = () => {
     
     const totalModules = courses.reduce((total, course) => total + (course.modules_count || 0), 0);
     const completedModules = courses.reduce((total, course) => {
-      const completed = Math.floor(((course.progress || 0) / 100) * (course.modules_count || 0));
+      const completed = course.modules_count > 0 ? Math.floor(((course.progress || 0) / 100) * (course.modules_count || 0)) : 0;
       return total + completed;
-    }, 0);
+      }}, 0);
 
     return {
       totalCourses,
       completedCourses,
       inProgressCourses,
       totalStudyTime: `${totalStudyTime}h`,
-      completionRate: Math.round((completedCourses / totalCourses) * 100),
+      completionRate: totalCourses === 0 ? 0 : Math.round((completedCourses / totalCourses) * 100),
       totalModules,
       completedModules,
-      moduleCompletionRate: Math.round((completedModules / totalModules) * 100)
+      moduleCompletionRate: totalModules === 0 ? 0 : Math.round((completedModules / totalModules) * 100)
     };
   };
 
