@@ -32,63 +32,88 @@ const ProgressPage = () => {{
     }}
   }}, [courses]);
 
-  const calculateProgressStats = (courses) => {{
+  const calculateProgressStats = (courses) => {
     const totalCourses = courses.length;
     const completedCourses = courses.filter(course => course.progress === 100).length;
     const inProgressCourses = courses.filter(course => course.progress > 0 && course.progress < 100).length;
-    const totalStudyTime = courses.reduce((total, course) => {{
-      const duration = parseInt(course.estimated_duration) || 2;
-      return total + duration;
-    }}, 0);
+    const totalStudyTime = calculateTotalStudyTime(courses);
+    const totalModules = calculateTotalModules(courses);
+    const completedModules = calculateCompletedModules(courses);
 
-    const totalModules = courses.reduce((total, course) => total + (course.modules_count || 0), 0);
-    const completedModules = courses.reduce((total, course) => {{
-      const completed = course.modules_count > 0 ? Math.floor(((course.progress || 0) / 100) * (course.modules_count || 0)) : 0;
-      return total + completed;
-    }}, 0);
-
-    return {{
+    return {
       totalCourses,
       completedCourses,
       inProgressCourses,
-      totalStudyTime: `${{totalStudyTime}}h`,
+      totalStudyTime: `${totalStudyTime}h`,
       completionRate: totalCourses === 0 ? 0 : Math.round((completedCourses / totalCourses) * 100),
       totalModules,
       completedModules,
       moduleCompletionRate: totalModules === 0 ? 0 : Math.round((completedModules / totalModules) * 100)
-    }};
-  }};
+    };
+  };
 
-  const getRecentActivity = (courses) => {{
+  const calculateTotalStudyTime = (courses) => {
+    return courses.reduce((total, course) => {
+      const duration = parseInt(course.estimated_duration) || 2;
+      return total + duration;
+    }, 0);
+  };
+
+  const calculateTotalModules = (courses) => {
+    return courses.reduce((total, course) => total + (course.modules_count || 0), 0);
+  };
+
+  const calculateCompletedModules = (courses) => {
+    return courses.reduce((total, course) => {
+      const completed = course.modules_count > 0 ? Math.floor(((course.progress || 0) / 100) * (course.modules_count || 0)) : 0;
+      return total + completed;
+    }, 0);
+
+  const getRecentActivity = (courses) => {
+    const sortByLastAccessed = (a, b) => {
+      const dateA = new Date(a.lastAccessed || a.created_at);
+      const dateB = new Date(b.lastAccessed || b.created_at);
+      return dateB - dateA;
+    };
+
     return courses
-      .sort((a, b) => new Date(b.lastAccessed || b.created_at) - new Date(a.lastAccessed || a.created_at))
+      .sort(sortByLastAccessed)
       .slice(0, 5)
-      .map(course => ({{
+      .map(course => ({
         id: course._id,
         title: course.title,
         progress: course.progress || 0,
         lastAccessed: course.lastAccessed || 'Recently created',
         modulesCompleted: course.modules_count > 0 ? Math.floor(((course.progress || 0) / 100) * (course.modules_count || 0)) : 0,
         totalModules: course.modules_count || 0
-      }}));
-  }};
+      }));
+  };
 
-  const getProgressColor = (progress) => {{
-    if (progress === 100) return 'text-green-600 bg-green-100';
-    if (progress >= 50) return 'text-blue-600 bg-blue-100';
-    if (progress > 0) return 'text-yellow-600 bg-yellow-100';
-    return 'text-gray-600 bg-gray-100';
-  }};
+  const progressColorMap = {
+    100: 'text-green-600 bg-green-100',
+    50: 'text-blue-600 bg-blue-100',
+    0: 'text-yellow-600 bg-yellow-100',
+    default: 'text-gray-600 bg-gray-100'
+  };
 
-  const getDifficultyColor = (difficulty) => {{
-    switch (difficulty?.toLowerCase()) {{
-      case 'beginner': return 'text-green-600 bg-green-100';
-      case 'intermediate': return 'text-yellow-600 bg-yellow-100';
-      case 'advanced': return 'text-orange-600 bg-orange-100';
-      case 'expert': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }}
-  }};
+  const getProgressColor = (progress) => {
+    if (progress === 100) return progressColorMap[100];
+    if (progress >= 50) return progressColorMap[50];
+    if (progress > 0) return progressColorMap[0];
+    return progressColorMap.default;
+  };
+
+  const difficultyColorMap = {
+    beginner: 'text-green-600 bg-green-100',
+    intermediate: 'text-yellow-600 bg-yellow-100',
+    advanced: 'text-orange-600 bg-orange-100',
+    expert: 'text-red-600 bg-red-100',
+    default: 'text-gray-600 bg-gray-100'
+  };
+
+  const getDifficultyColor = (difficulty) => {
+    return difficultyColorMap[difficulty?.toLowerCase()] || difficultyColorMap.default;
+  };
 
   if (loading) {{
     return (
@@ -157,8 +182,8 @@ const ProgressPage = () => {{
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                    style={{{{ width: `${{progressStats.completionRate}}%` }}}}
-                  ></div>
+                    style={{{{{ width: `${{{{progressStats.completionRate}}}}%` }}}}}>
+                  </div>
                 </div>
               </div>
             </div>
@@ -233,8 +258,8 @@ const ProgressPage = () => {{
                         <div className="w-20 bg-gray-200 rounded-full h-2">
                           <div 
                             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{{{ width: `${{activity.progress}}%` }}}}
-                          ></div>
+                            style={{{{{ width: `${{{{activity.progress}}}}%` }}}}}>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -301,9 +326,7 @@ const ProgressPage = () => {{
                                 (course.progress || 0) === 100 ? 'bg-green-600' : 
                                 (course.progress || 0) >= 50 ? 'bg-blue-600' : 'bg-yellow-600'
                               }}`}}
-                              style={{{{ width: `${{course.progress || 0}}%` }}}}
-                            ></div>
-                          </div>
+                              className={{{{{`h-2 rounded-full transition-all duration-300 ${{{{ (course.progress || 0) === 100 ? 'bg-green-600' : (course.progress || 0) >= 50 ? 'bg-blue-600' : 'bg-yellow-600' }}}}`}}}}
                         </div>
                       </div>
 
@@ -369,4 +392,4 @@ const ProgressPage = () => {{
 
 export default ProgressPage;
 
-export default ProgressPage;
+
